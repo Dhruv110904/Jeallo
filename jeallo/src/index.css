@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-950: #020617;
+}
+
+body {
+  background-color: var(--color-slate-950);
+  color: white;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}
