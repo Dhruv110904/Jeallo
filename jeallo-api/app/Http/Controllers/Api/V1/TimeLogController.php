@@ -5,46 +5,41 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use App\Models\TaskTimeLog;
+use App\Http\Resources\TimeLogResource;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
 
 class TimeLogController extends Controller
 {
     public function index(Task $task)
     {
-        Gate::authorize('view', $task);
-
-        $logs = $task->timeLogs()->with('user')->latest()->get();
-
-        return response()->json($logs->map(fn($l) => [
-            'id' => $l->id,
-            'user' => ['id' => $l->user->id, 'name' => $l->user->name],
-            'started_at' => $l->started_at,
-            'ended_at' => $l->ended_at,
-            'hours' => $l->hours,
-            'note' => $l->note,
-        ]));
+        return TimeLogResource::collection($task->timeLogs()->with('user')->get());
     }
 
     public function store(Request $request, Task $task)
     {
-        Gate::authorize('view', $task);
-
-        $request->validate([
+        $validated = $request->validate([
             'started_at' => 'required|date',
             'ended_at' => 'nullable|date|after:started_at',
-            'hours' => 'nullable|numeric|min:0.1',
-            'note' => 'nullable|string|max:500',
+            'hours' => 'required|numeric|min:0.1',
+            'description' => 'nullable|string',
         ]);
 
         $log = $task->timeLogs()->create([
-            'user_id' => $request->user()->id,
-            'started_at' => $request->started_at,
-            'ended_at' => $request->ended_at,
-            'hours' => $request->hours,
-            'note' => $request->note,
+            ...$validated,
+            'user_id' => Auth::id(),
         ]);
 
-        return response()->json($log->load('user'), 201);
+        // Update task's total logged hours
+        $task->increment('logged_hours', $validated['hours']);
+
+        return new TimeLogResource($log);
+    }
+
+    public function destroy(TaskTimeLog $timeLog)
+    {
+        $timeLog->task->decrement('logged_hours', $timeLog->hours);
+        $timeLog->delete();
+        return response()->noContent();
     }
 }

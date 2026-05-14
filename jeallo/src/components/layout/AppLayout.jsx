@@ -7,14 +7,12 @@ export default function AppLayout() {
   const { isSidebarOpen } = useUiStore();
 
   return (
-    <div className="flex h-screen bg-[#0f172a] text-slate-200 overflow-hidden">
+    <div className="flex h-screen bg-cloud-white text-slate-900 overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-950/30 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
         </main>
       </div>
     </div>

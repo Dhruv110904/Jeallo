@@ -15,15 +15,15 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'employee_id' => 'required|string|size:5',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('employee_id', $request->employee_id)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'employee_id' => ['The provided credentials are incorrect.'],
             ]);
         }
 
@@ -108,5 +108,27 @@ class AuthController extends Controller
         );
 
         return response()->json(['message' => __($status)]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Current password is incorrect.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($request->password)
+        ])->save();
+
+        return response()->json(['message' => 'Password changed successfully.']);
     }
 }

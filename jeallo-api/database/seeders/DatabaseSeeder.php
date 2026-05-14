@@ -2,222 +2,112 @@
 
 namespace Database\Seeders;
 
-use App\Models\Task;
-use App\Models\TaskComment;
-use App\Models\TaskStatusHistory;
-use App\Models\TaskTimeLog;
 use App\Models\User;
+use App\Models\Workspace;
+use App\Models\Project;
+use App\Models\Board;
+use App\Models\TaskList;
+use App\Models\Task;
+use App\Models\Attendance;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Permissions
-        $permissions = [
-            'create tasks', 'edit tasks', 'delete tasks', 'assign tasks',
-            'view all tasks', 'view own tasks', 'update task status',
-            'add comments', 'upload attachments', 'log time',
-            'view reports', 'manage users', 'manage system',
-        ];
+        // 0. Create Roles
+        $adminRole = Role::create(['name' => 'super_admin']);
+        $managerRole = Role::create(['name' => 'manager']);
+        $employeeRole = Role::create(['name' => 'employee']);
 
-        foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p]);
-        }
-
-        // Roles
-        $superAdmin = Role::firstOrCreate(['name' => 'super_admin']);
-        $superAdmin->syncPermissions($permissions);
-
-        $manager = Role::firstOrCreate(['name' => 'manager']);
-        $manager->syncPermissions([
-            'create tasks', 'edit tasks', 'delete tasks', 'assign tasks',
-            'view all tasks', 'add comments', 'upload attachments', 'view reports',
-        ]);
-
-        $employee = Role::firstOrCreate(['name' => 'employee']);
-        $employee->syncPermissions([
-            'view own tasks', 'update task status', 'add comments',
-            'upload attachments', 'log time',
-        ]);
-
-        // Super Admin
-        $admin = User::firstOrCreate(['email' => 'admin@jeallo.app'], [
-            'name' => 'Super Admin',
-            'password' => Hash::make('password'),
-            'department' => 'Management',
-            'designation' => 'CTO',
+        // 1. Create Initial Admin
+        $admin = User::create([
+            'name' => 'jeallo admin',
+            'email' => 'admin@jeallo.com',
+            'employee_id' => '98342',
+            'role' => 'super_admin',
+            'password' => Hash::make('Dj@629409'),
+            'designation' => 'Super Admin',
             'is_active' => true,
         ]);
-        $admin->assignRole('super_admin');
+        $admin->assignRole($adminRole);
 
-        // Managers
-        $managerUsers = [];
-        $managerData = [
-            ['name' => 'Sarah Johnson', 'email' => 'sarah@jeallo.app', 'designation' => 'Project Manager', 'department' => 'Engineering'],
-            ['name' => 'Michael Chen', 'email' => 'michael@jeallo.app', 'designation' => 'Product Manager', 'department' => 'Product'],
-            ['name' => 'Priya Sharma', 'email' => 'priya@jeallo.app', 'designation' => 'Team Lead', 'department' => 'Design'],
-        ];
+        // 2. Create Mohan (Employee)
+        $mohan = User::create([
+            'name' => 'Mohan',
+            'email' => 'mohan@jeallo.com',
+            'employee_id' => '26075',
+            'role' => 'employee',
+            'password' => Hash::make('Jeallo@123'),
+            'designation' => 'Junior Developer',
+            'department' => 'Engineering',
+            'joining_date' => '2026-05-01',
+            'is_active' => true,
+        ]);
+        $mohan->assignRole($employeeRole);
 
-        foreach ($managerData as $data) {
-            $mgr = User::firstOrCreate(['email' => $data['email']], array_merge($data, [
-                'password' => Hash::make('password'),
-                'is_active' => true,
-            ]));
-            $mgr->assignRole('manager');
-            $managerUsers[] = $mgr;
-        }
+        // 3. Seed Attendance for Mohan from May 1st to yesterday
+        $startDate = Carbon::create(2026, 5, 1);
+        $yesterday = Carbon::yesterday();
 
-        // Employees
-        $employeeUsers = [];
-        $employeeData = [
-            ['name' => 'Ravi Kumar', 'email' => 'ravi@jeallo.app', 'designation' => 'Frontend Dev', 'department' => 'Engineering'],
-            ['name' => 'Alice Wang', 'email' => 'alice@jeallo.app', 'designation' => 'Backend Dev', 'department' => 'Engineering'],
-            ['name' => 'John Doe', 'email' => 'john@jeallo.app', 'designation' => 'UI Designer', 'department' => 'Design'],
-            ['name' => 'Emma Garcia', 'email' => 'emma@jeallo.app', 'designation' => 'QA Engineer', 'department' => 'Engineering'],
-            ['name' => 'David Kim', 'email' => 'david@jeallo.app', 'designation' => 'DevOps', 'department' => 'Infrastructure'],
-            ['name' => 'Fatima Al-Hassan', 'email' => 'fatima@jeallo.app', 'designation' => 'Data Analyst', 'department' => 'Analytics'],
-            ['name' => 'Lucas Oliveira', 'email' => 'lucas@jeallo.app', 'designation' => 'Mobile Dev', 'department' => 'Engineering'],
-            ['name' => 'Zoe Williams', 'email' => 'zoe@jeallo.app', 'designation' => 'Scrum Master', 'department' => 'Management'],
-            ['name' => 'Arjun Patel', 'email' => 'arjun@jeallo.app', 'designation' => 'Full Stack Dev', 'department' => 'Engineering'],
-            ['name' => 'Nina Petrova', 'email' => 'nina@jeallo.app', 'designation' => 'UX Researcher', 'department' => 'Design'],
-        ];
-
-        foreach ($employeeData as $data) {
-            $emp = User::firstOrCreate(['email' => $data['email']], array_merge($data, [
-                'password' => Hash::make('password'),
-                'is_active' => true,
-            ]));
-            $emp->assignRole('employee');
-            $employeeUsers[] = $emp;
-        }
-
-        $allUsers = array_merge($managerUsers, $employeeUsers);
-        $categories = ['Frontend', 'Backend', 'Design', 'DevOps', 'Research', 'Testing', 'Documentation', 'Mobile'];
-        $statuses = ['todo', 'in_progress', 'in_review', 'done', 'cancelled'];
-        $priorities = ['low', 'medium', 'high', 'critical'];
-
-        $taskTitles = [
-            'Implement user authentication', 'Design landing page mockups', 'Set up CI/CD pipeline',
-            'Write unit tests for API', 'Optimize database queries', 'Create mobile responsive layout',
-            'Integrate payment gateway', 'Set up monitoring and alerts', 'Conduct user research interviews',
-            'Refactor legacy codebase', 'Build notification system', 'Deploy to staging environment',
-            'Create API documentation', 'Fix login page bugs', 'Implement dark mode',
-            'Set up error tracking', 'Performance audit', 'Accessibility review',
-            'Database migration script', 'Onboarding flow redesign', 'Build admin dashboard',
-            'Integrate analytics SDK', 'Security vulnerability assessment', 'Code review process',
-            'Implement file upload', 'Search functionality', 'Email template design',
-            'Load testing', 'Implement caching layer', 'Update dependencies',
-            'Create design system', 'API rate limiting', 'Setup staging database',
-            'Feature flag implementation', 'User profile settings', 'Notification preferences',
-            'Export data feature', 'Calendar integration', 'Webhook implementation',
-            'Audit log system', 'Role-based permissions', 'Multi-language support',
-            'Image optimization', 'Video streaming setup', 'Push notifications',
-            'OAuth2 integration', 'Two-factor authentication', 'Password reset flow',
-            'Session management', 'CSV import feature', 'Advanced search filters',
-            'Build reporting dashboard', 'Kanban board drag and drop', 'Time tracking widget',
-            'Comment threading', 'Attachment preview', 'Task template system',
-            'Batch task operations', 'Custom fields feature', 'Recurring tasks',
-        ];
-
-        // Create 60 tasks
-        $tasks = [];
-        $creatorUsers = array_merge([$admin], $managerUsers);
-
-        foreach (array_slice($taskTitles, 0, 60) as $index => $title) {
-            $creator = $creatorUsers[array_rand($creatorUsers)];
-            $status = $statuses[array_rand($statuses)];
-            $priority = $priorities[array_rand($priorities)];
-            $category = $categories[array_rand($categories)];
-            $daysOffset = rand(-15, 30);
-
-            $task = Task::create([
-                'title' => $title,
-                'description' => 'Detailed description for: ' . $title . '. This task involves thorough analysis, design, implementation, and testing phases.',
-                'status' => $status,
-                'priority' => $priority,
-                'category' => $category,
-                'tags' => [$category, $priority, 'jeallo'],
-                'due_date' => now()->addDays($daysOffset)->format('Y-m-d'),
-                'estimated_hours' => rand(2, 40),
-                'created_by' => $creator->id,
-            ]);
-
-            // Assign 2-5 random employees using shuffle
-            $shuffled = $employeeUsers;
-            shuffle($shuffled);
-            $assignees = array_slice($shuffled, 0, rand(2, 5));
-            $pivotData = [];
-            foreach ($assignees as $emp) {
-                $pivotData[$emp->id] = ['assigned_at' => now()->subDays(rand(0, 10))];
-            }
-            $task->assignees()->sync($pivotData);
-
-            // Status history
-            if ($status !== 'todo') {
-                TaskStatusHistory::create([
-                    'task_id' => $task->id,
-                    'changed_by' => $creator->id,
-                    'old_status' => 'todo',
-                    'new_status' => $status,
+        while ($startDate->lte($yesterday)) {
+            if (!$startDate->isWeekend()) {
+                Attendance::create([
+                    'user_id' => $mohan->id,
+                    'date' => $startDate->toDateString(),
+                    'check_in' => '09:00:00',
+                    'check_out' => '18:15:00',
+                    'working_hours' => 9.25,
+                    'status' => 'present',
                 ]);
             }
-
-            // Time log
-            if (in_array($status, ['in_progress', 'done'])) {
-                TaskTimeLog::create([
-                    'task_id' => $task->id,
-                    'user_id' => $assignees[0]->id,
-                    'started_at' => now()->subDays(rand(1, 10))->subHours(rand(1, 5)),
-                    'ended_at' => now()->subDays(rand(0, 1)),
-                    'hours' => round(rand(1, 8) + rand(0, 9) / 10, 1),
-                    'note' => 'Working on ' . strtolower($title),
-                ]);
-            }
-
-            $tasks[] = $task;
+            $startDate->addDay();
         }
 
-        // Create 100 comments spread across tasks
-        $commentBodies = [
-            'This looks good, let me review the PR.',
-            'I\'ve started working on this, should be done by EOD.',
-            'Can we discuss the approach before implementation?',
-            'Blocked by dependency on the auth service.',
-            'Updated the ticket with more details.',
-            'This is a duplicate of another task.',
-            'Need more context to proceed.',
-            'Ready for review!',
-            'Found a edge case we need to handle.',
-            'Great work! Merging this.',
-            'Let\'s schedule a quick sync on this.',
-            'Added test coverage for the main scenarios.',
-            'The staging deployment is ready for testing.',
-            'Performance looks good after optimization.',
-            'I\'ll take ownership of this task.',
-        ];
+        // 4. Create a default workspace and project
+        $workspace = Workspace::create([
+            'name' => 'Main Workspace',
+            'slug' => 'main-workspace',
+            'description' => 'The primary workspace for Jeallo operations.',
+            'owner_id' => $admin->id,
+        ]);
 
-        $commentCount = 0;
-        foreach ($tasks as $task) {
-            $numComments = rand(1, 4);
-            for ($i = 0; $i < $numComments && $commentCount < 100; $i++) {
-                $commenter = $allUsers[array_rand($allUsers)];
-                TaskComment::create([
-                    'task_id' => $task->id,
-                    'user_id' => $commenter->id,
-                    'body' => $commentBodies[array_rand($commentBodies)],
-                    'parent_id' => null,
-                ]);
-                $commentCount++;
-            }
-        }
+        $workspace->users()->attach($admin->id, ['role' => 'owner', 'joined_at' => now()]);
+        $workspace->users()->attach($mohan->id, ['role' => 'member', 'joined_at' => now()]);
 
-        $this->command->info('✅ Jeallo seeded successfully!');
-        $this->command->info('   Super Admin: admin@jeallo.app / password');
-        $this->command->info('   Managers: sarah@jeallo.app, michael@jeallo.app, priya@jeallo.app / password');
-        $this->command->info('   Employees: ravi@jeallo.app, alice@jeallo.app, ... / password');
+        $project = Project::create([
+            'workspace_id' => $workspace->id,
+            'name' => 'Jeallo Implementation',
+            'slug' => 'jeallo-implementation',
+            'description' => 'Tracking the development and implementation of the Jeallo platform.',
+            'status' => 'active',
+            'owner_id' => $admin->id,
+        ]);
+
+        $board = Board::create([
+            'project_id' => $project->id,
+            'name' => 'Development Board',
+            'type' => 'kanban',
+        ]);
+
+        $todoList = TaskList::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
+        $inProgressList = TaskList::create(['board_id' => $board->id, 'name' => 'In Progress', 'position' => 1]);
+        $doneList = TaskList::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 2]);
+
+        $task = Task::create([
+            'project_id' => $project->id,
+            'board_id' => $board->id,
+            'list_id' => $inProgressList->id,
+            'title' => 'Update Profile UI',
+            'description' => 'Enhance the profile page with new fields.',
+            'status' => 'in_progress',
+            'priority' => 'high',
+            'created_by' => $admin->id,
+        ]);
+        
+        $task->assignees()->attach($mohan->id);
     }
 }

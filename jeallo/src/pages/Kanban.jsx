@@ -1,304 +1,307 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../api/axios';
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  defaultDropAnimationSideEffects,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { useParams } from 'react-router-dom';
 import { 
-  MoreHorizontal, Plus, Clock, 
-  MessageSquare, Paperclip, AlertTriangle 
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import TaskModal from '../components/TaskModal';
-
-const COLUMNS = [
-  { id: 'todo', title: 'To Do', color: 'bg-slate-500' },
-  { id: 'in_progress', title: 'In Progress', color: 'bg-indigo-500' },
-  { id: 'in_review', title: 'In Review', color: 'bg-purple-500' },
-  { id: 'done', title: 'Done', color: 'bg-emerald-500' },
-];
-
-const PRIORITY_COLORS = {
-  low: 'bg-slate-500/20 text-slate-400',
-  medium: 'bg-amber-500/20 text-amber-500',
-  high: 'bg-orange-500/20 text-orange-500',
-  critical: 'bg-red-500/20 text-red-500',
-};
-
-function TaskCard({ task, isOverlay, onClick }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id, data: { type: 'Task', task } });
-
-  const style = {
-    transition,
-    transform: CSS.Translate.toString(transform),
-  };
-
-  if (isDragging) {
-    return (
-      <div ref={setNodeRef} style={style} className="opacity-30 bg-slate-800 border-2 border-indigo-500/50 rounded-2xl h-[120px] mb-4" />
-    );
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onClick={(e) => {
-        // Prevent drag events from triggering click if needed, 
-        // but dnd-kit usually handles this.
-        onClick(task);
-      }}
-      className={`bg-slate-900 border border-slate-800 p-4 rounded-2xl mb-4 shadow-lg hover:border-slate-700 transition-all group cursor-grab active:cursor-grabbing ${isOverlay ? 'shadow-2xl shadow-indigo-500/20 border-indigo-500/50 scale-105' : ''}`}
-    >
-      <div className="flex justify-between items-start mb-3">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase tracking-wider ${PRIORITY_COLORS[task.priority]}`}>
-          {task.priority}
-        </span>
-        <button className="text-slate-600 hover:text-slate-400">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-      </div>
-      
-      <h4 className="text-sm font-bold text-slate-200 line-clamp-2 leading-tight group-hover:text-indigo-400 transition-colors">
-        {task.title}
-      </h4>
-      
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex -space-x-1.5">
-          {task.assignees?.slice(0, 2).map((a) => (
-            <div key={a.id} className="w-6 h-6 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[8px] font-bold overflow-hidden">
-              {a.avatar ? <img src={a.avatar} alt="" /> : a.name.charAt(0)}
-            </div>
-          ))}
-          {task.assignees?.length > 2 && (
-            <div className="w-6 h-6 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[8px] font-bold text-slate-500">
-              +{task.assignees.length - 2}
-            </div>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-3 text-slate-500">
-          {task.comments_count > 0 && (
-            <span className="flex items-center gap-1 text-[10px] font-medium">
-              <MessageSquare className="w-3 h-3" />
-              {task.comments_count}
-            </span>
-          )}
-          {task.attachments_count > 0 && (
-            <span className="flex items-center gap-1 text-[10px] font-medium">
-              <Paperclip className="w-3 h-3" />
-              {task.attachments_count}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+  DndContext, 
+  DragOverlay, 
+  closestCorners, 
+  KeyboardSensor, 
+  PointerSensor, 
+  useSensor, 
+  useSensors,
+  defaultDropAnimationSideEffects
+} from '@dnd-kit/core';
+import { 
+  arrayMove, 
+  SortableContext, 
+  sortableKeyboardCoordinates, 
+  horizontalListSortingStrategy
+} from '@dnd-kit/sortable';
+import { Search, Filter, Users, Plus, MoreHorizontal, LayoutGrid, ChevronDown, Loader2 } from 'lucide-react';
+import axios from '../api/axios';
+import KanbanColumn from '../components/kanban/KanbanColumn';
+import KanbanCard from '../components/kanban/KanbanCard';
+import TaskDetailPanel from '../components/tasks/TaskDetailPanel';
+import { toast } from 'react-hot-toast';
 
 export default function Kanban() {
-  const queryClient = useQueryClient();
+  const { projectId } = useParams();
+  const [lists, setLists] = useState([]);
   const [activeTask, setActiveTask] = useState(null);
-  const [tasks, setTasks] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
-
-  const { data: tasksData, isLoading } = useQuery({
-    queryKey: ['tasks-kanban'],
-    queryFn: () => api.get('/tasks', { params: { per_page: 100 } }).then(res => res.data),
-  });
-
-  useEffect(() => {
-    if (tasksData?.data) {
-      setTasks(tasksData.data);
-    }
-  }, [tasksData]);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }) => api.patch(`/tasks/${id}/status`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['tasks-kanban']);
-      queryClient.invalidateQueries(['dashboard-stats']);
-    },
-    onError: () => toast.error('Failed to update task status'),
-  });
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [activeDragItem, setActiveDragItem] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  function handleDragStart(event) {
-    setActiveTask(event.active.data.current.task);
-  }
+  useEffect(() => {
+    fetchBoardData();
+  }, [projectId]);
 
-  function handleDragOver(event) {
-    const { active, over } = event;
-    if (!over) return;
+  const fetchBoardData = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Get project boards
+      let boardsRes = await axios.get(`/v1/projects/${projectId}/boards`);
+      let board = boardsRes.data.data[0];
+      
+      // 2. If no board exists, create a default one
+      if (!board) {
+        const newBoardRes = await axios.post(`/v1/projects/${projectId}/boards`, {
+          name: 'Main Board',
+          type: 'kanban'
+        });
+        board = newBoardRes.data.data;
+      }
 
-    const activeId = active.id;
-    const overId = over.id;
+      if (board) {
+        // 3. Get lists for the active board
+        const listsRes = await axios.get(`/v1/boards/${board.id}/lists`);
+        let currentLists = listsRes.data.data;
 
-    if (activeId === overId) return;
-
-    const isActiveATask = active.data.current?.type === 'Task';
-    const isOverATask = over.data.current?.type === 'Task';
-
-    if (!isActiveATask) return;
-
-    // Implements dropping onto a task in a different column
-    if (isActiveATask && isOverATask) {
-      setTasks((tasks) => {
-        const activeIndex = tasks.findIndex((t) => t.id === activeId);
-        const overIndex = tasks.findIndex((t) => t.id === overId);
-
-        if (tasks[activeIndex].status !== tasks[overIndex].status) {
-          tasks[activeIndex].status = tasks[overIndex].status;
-          return arrayMove(tasks, activeIndex, overIndex);
+        // 4. If no lists, create default ones
+        if (currentLists.length === 0) {
+          const defaults = ['TO DO', 'IN PROGRESS', 'IN REVIEW', 'DONE'];
+          // Use sequential creation to avoid race conditions on order
+          for (const name of defaults) {
+            await axios.post(`/v1/boards/${board.id}/lists`, { name });
+          }
+          const updatedRes = await axios.get(`/v1/boards/${board.id}/lists`);
+          currentLists = updatedRes.data.data;
         }
-
-        return arrayMove(tasks, activeIndex, overIndex);
-      });
+        setLists(currentLists);
+      }
+    } catch (error) {
+      console.error('Failed to fetch board data', error);
+      toast.error('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    // Implements dropping onto a column
-    const isOverAColumn = over.data.current?.type === 'Column';
-    if (isActiveATask && isOverAColumn) {
-      setTasks((tasks) => {
-        const activeIndex = tasks.findIndex((t) => t.id === activeId);
-        tasks[activeIndex].status = overId;
-        return arrayMove(tasks, activeIndex, activeIndex);
-      });
+  const handleAddColumn = async () => {
+    const name = prompt('Enter column name:');
+    if (!name) return;
+
+    try {
+      const boardsRes = await axios.get(`/v1/projects/${projectId}/boards`);
+      const boardId = boardsRes.data.data[0].id;
+      await axios.post(`/v1/boards/${boardId}/lists`, { name });
+      fetchBoardData();
+      toast.success('Column added');
+    } catch (error) {
+      toast.error('Failed to add column');
     }
-  }
+  };
 
-  function handleDragEnd(event) {
+  const onDragStart = (event) => {
+    setActiveDragItem(event.active.data.current);
+  };
+
+  const onDragOver = (event) => {
     const { active, over } = event;
-    setActiveTask(null);
+    if (!over) return;
+
+    const activeType = active.data.current?.type;
+    const overType = over.data.current?.type;
+
+    if (activeType === 'Task' && overType === 'Task') {
+        const activeTask = active.data.current.task;
+        const overTask = over.data.current.task;
+        
+        if (activeTask.list_id !== overTask.list_id) {
+            setLists(prev => {
+                const activeList = prev.find(l => l.id === activeTask.list_id);
+                const overList = prev.find(l => l.id === overTask.list_id);
+                
+                if (!activeList || !overList) return prev;
+
+                const activeTasks = activeList.tasks.filter(t => t.id !== activeTask.id);
+                const overTasks = [...overList.tasks];
+                const overIndex = overTasks.findIndex(t => t.id === overTask.id);
+                overTasks.splice(overIndex, 0, { ...activeTask, list_id: overTask.list_id });
+
+                return prev.map(l => {
+                    if (l.id === activeList.id) return { ...l, tasks: activeTasks };
+                    if (l.id === overList.id) return { ...l, tasks: overTasks };
+                    return l;
+                });
+            });
+        }
+    }
+
+    if (activeType === 'Task' && overType === 'List') {
+        const activeTask = active.data.current.task;
+        const overListId = over.id;
+
+        if (activeTask.list_id !== overListId) {
+            setLists(prev => {
+                const activeList = prev.find(l => l.id === activeTask.list_id);
+                const overList = prev.find(l => l.id === overListId);
+
+                if (!activeList || !overList) return prev;
+
+                const activeTasks = activeList.tasks.filter(t => t.id !== activeTask.id);
+                const overTasks = [...overList.tasks, { ...activeTask, list_id: overListId }];
+
+                return prev.map(l => {
+                    if (l.id === activeList.id) return { ...l, tasks: activeTasks };
+                    if (l.id === overList.id) return { ...l, tasks: overTasks };
+                    return l;
+                });
+            });
+        }
+    }
+  };
+
+  const onDragEnd = async (event) => {
+    const { active, over } = event;
+    setActiveDragItem(null);
 
     if (!over) return;
 
-    const activeId = active.id;
-    const overId = over.id;
-
-    const activeTaskObj = tasks.find(t => t.id === activeId);
-    if (activeTaskObj) {
-      updateStatusMutation.mutate({ id: activeId, status: activeTaskObj.status });
+    if (active.data.current?.type === 'List' && active.id !== over.id) {
+        const oldIndex = lists.findIndex(l => l.id === active.id);
+        const newIndex = lists.findIndex(l => l.id === over.id);
+        const newLists = arrayMove(lists, oldIndex, newIndex);
+        setLists(newLists);
+        
+        try {
+          const boardsRes = await axios.get(`/v1/projects/${projectId}/boards`);
+          await axios.patch(`/v1/boards/${boardsRes.data.data[0].id}/lists/reorder`, {
+            list_ids: newLists.map(l => l.id)
+          });
+        } catch (error) {
+          toast.error('Failed to save list order');
+        }
     }
+
+    if (active.data.current?.type === 'Task') {
+        const task = active.data.current.task;
+        const overListId = over.id;
+        // Simple move logic for now
+        if (task.list_id !== overListId) {
+            try {
+                await axios.patch(`/v1/tasks/${task.id}/move`, {
+                    list_id: overListId,
+                    position: 0
+                });
+            } catch (error) {
+                toast.error('Failed to update task');
+                fetchBoardData();
+            }
+        }
+    }
+  };
+
+  if (isLoading) {
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-jeallo-primary" />
+            <div className="text-center">
+                <p className="text-sm font-black text-slate-900 tracking-tight uppercase">Setting up your workspace</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Fetching boards & columns...</p>
+            </div>
+        </div>
+    );
   }
 
   return (
-    <div className="h-[calc(100vh-10rem)] flex flex-col">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Kanban Board</h1>
-          <p className="text-slate-400 mt-1">Drag and drop tasks to manage workflow</p>
+    <div className="h-full flex flex-col bg-white overflow-hidden">
+      {/* Sub-Header Toolbar */}
+      <div className="px-8 py-3 flex items-center justify-between border-b border-slate-100 bg-white/50 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-jeallo-primary transition-colors" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search board"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-slate-50 border border-slate-100 rounded-lg py-1.5 pl-10 pr-4 text-sm font-medium focus:bg-white focus:border-jeallo-primary/30 outline-none transition-all w-48 focus:w-64"
+            />
+          </div>
+
+          <div className="flex items-center gap-1">
+             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
+                <Users size={14} />
+             </div>
+             <div className="w-8 h-8 rounded-full bg-jeallo-primary flex items-center justify-center text-white text-[10px] font-black border-2 border-white shadow-sm">DJ</div>
+          </div>
+
+          <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-slate-500 hover:text-jeallo-primary hover:bg-slate-50 rounded-lg transition-all">
+            <Filter size={16} />
+            <span>Filter</span>
+          </button>
         </div>
-        <div className="flex -space-x-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="w-10 h-10 rounded-full border-4 border-[#0f172a] bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 ring-1 ring-slate-800">
-              {i}
-            </div>
-          ))}
+
+        <div className="flex items-center gap-2">
+            <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-slate-500 hover:text-slate-900 bg-slate-50 border border-slate-100 rounded-lg hover:border-slate-200 transition-all">
+                <span>Group</span>
+                <ChevronDown size={14} />
+            </button>
+            <button className="p-2 text-slate-400 hover:text-slate-900 transition-all">
+                <LayoutGrid size={18} />
+            </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto pb-4">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
+      {/* Kanban Board Area */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar bg-slate-50/30">
+        <DndContext 
+            sensors={sensors} 
+            collisionDetection={closestCorners} 
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
         >
-          <div className="flex gap-6 h-full min-w-max">
-            {COLUMNS.map((column) => (
-              <div 
-                key={column.id} 
-                className="w-80 flex flex-col bg-slate-950/40 border border-slate-800/50 rounded-3xl p-4"
-              >
-                <div className="flex items-center justify-between mb-6 px-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${column.color}`}></div>
-                    <h3 className="font-bold text-slate-300 text-sm uppercase tracking-widest">{column.title}</h3>
-                    <span className="bg-slate-800 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                      {tasks.filter(t => t.status === column.id).length}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => { 
-                      setSelectedTask({ status: column.id }); 
-                      setIsModalOpen(true); 
-                    }}
-                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                  <SortableContext
-                    id={column.id}
-                    items={tasks.filter(t => t.status === column.id).map(t => t.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {tasks
-                      .filter((task) => task.status === column.id)
-                      .map((task) => (
-                        <TaskCard 
-                          key={task.id} 
-                          task={task} 
-                          onClick={(t) => { setSelectedTask(t); setIsModalOpen(true); }}
-                        />
-                      ))}
-                  </SortableContext>
-                </div>
-              </div>
-            ))}
+          <div className="inline-flex h-full p-8 gap-8 items-start">
+            <SortableContext items={lists.map(l => l.id)} strategy={horizontalListSortingStrategy}>
+              {lists.map((list) => (
+                <KanbanColumn 
+                  key={list.id} 
+                  list={list} 
+                  onCardClick={(task) => {
+                    setActiveTask(task);
+                    setIsPanelOpen(true);
+                  }}
+                />
+              ))}
+            </SortableContext>
+            
+            <button 
+              onClick={handleAddColumn}
+              className="min-w-[48px] h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-jeallo-primary hover:border-jeallo-primary/30 transition-all shadow-sm group shrink-0"
+            >
+              <Plus size={20} className="group-hover:rotate-90 transition-transform" />
+            </button>
           </div>
 
+          {/* Drag Overlay */}
           <DragOverlay dropAnimation={{
             sideEffects: defaultDropAnimationSideEffects({
               styles: {
-                active: {
-                  opacity: '0.5',
-                },
-              },
-            }),
+                active: { opacity: '0.5' }
+              }
+            })
           }}>
-            {activeTask ? <TaskCard task={activeTask} isOverlay /> : null}
+            {activeDragItem?.type === 'List' ? (
+                <KanbanColumn list={activeDragItem.list} isOverlay />
+            ) : activeDragItem?.type === 'Task' ? (
+                <KanbanCard task={activeDragItem.task} isOverlay />
+            ) : null}
           </DragOverlay>
         </DndContext>
       </div>
 
-      <TaskModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        task={selectedTask}
+      <TaskDetailPanel 
+        task={activeTask} 
+        isOpen={isPanelOpen} 
+        onClose={() => setIsPanelOpen(false)}
+        onUpdate={() => fetchBoardData()}
       />
     </div>
   );

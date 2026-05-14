@@ -3,86 +3,91 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Task;
-use App\Models\User;
+use App\Models\Project;
+use App\Models\Sprint;
+use App\Models\Workspace;
 use Illuminate\Http\Request;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\TasksExport;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
-    public function overview(Request $request)
+    public function overview(Project $project)
     {
-        $total = Task::count();
-        $completed = Task::where('status', 'done')->count();
-        $inProgress = Task::where('status', 'in_progress')->count();
-        $overdue = Task::whereNotNull('due_date')
-            ->where('due_date', '<', now())
-            ->whereNotIn('status', ['done', 'cancelled'])
-            ->count();
+        $stats = [
+            'total_tasks' => $project->tasks()->count(),
+            'completed' => $project->tasks()->where('status', 'done')->count(),
+            'in_progress' => $project->tasks()->whereIn('status', ['in_progress', 'in_review'])->count(),
+            'overdue' => $project->tasks()->where('due_date', '<', now())->where('status', '!=', 'done')->count(),
+        ];
 
-        $completionRate = $total > 0 ? round(($completed / $total) * 100, 1) : 0;
-
-        // Per-employee stats
-        $employeeStats = User::whereHas('roles', fn($q) => $q->where('name', 'employee'))
-            ->with(['assignedTasks' => fn($q) => $q->select('tasks.id', 'status', 'due_date')])
-            ->get()
-            ->map(fn($user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'total' => $user->assignedTasks->count(),
-                'completed' => $user->assignedTasks->where('status', 'done')->count(),
-                'overdue' => $user->assignedTasks->filter(fn($t) =>
-                    $t->due_date && $t->due_date < now() && ! in_array($t->status, ['done', 'cancelled'])
-                )->count(),
-                'completion_rate' => $user->assignedTasks->count() > 0
-                    ? round(($user->assignedTasks->where('status', 'done')->count() / $user->assignedTasks->count()) * 100, 1)
-                    : 0,
-            ]);
-
-        $tasksByStatus = Task::selectRaw('status, COUNT(*) as count')
+        $byStatus = $project->tasks()
+            ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
-            ->get()
-            ->pluck('count', 'status');
+            ->get();
 
-        $tasksByPriority = Task::selectRaw('priority, COUNT(*) as count')
+        $byPriority = $project->tasks()
+            ->select('priority', DB::raw('count(*) as count'))
             ->groupBy('priority')
-            ->get()
-            ->pluck('count', 'priority');
+            ->get();
 
         return response()->json([
-            'total' => $total,
-            'completed' => $completed,
-            'in_progress' => $inProgress,
-            'overdue' => $overdue,
-            'completion_rate' => $completionRate,
-            'tasks_by_status' => $tasksByStatus,
-            'tasks_by_priority' => $tasksByPriority,
-            'employee_stats' => $employeeStats,
+            'stats' => $stats,
+            'by_status' => $byStatus,
+            'by_priority' => $byPriority,
         ]);
     }
 
-    public function employeeReport(Request $request, User $user)
+    public function velocity(Project $project)
     {
-        $tasks = $user->assignedTasks()->with('creator')->get();
+        // Jira-style velocity: story points committed vs completed per sprint
+        $velocity = $project->boards()->with(['sprints' => function($q) {
+            $q->where('status', 'completed')->latest()->take(5);
+        }, 'sprints.tasks'])->get()->pluck('sprints')->flatten();
 
+        $data = $velocity->map(function($sprint) {
+            return [
+                'name' => $sprint->name,
+                'committed' => $sprint->tasks->sum('story_points'),
+                'completed' => $sprint->tasks->where('status', 'done')->sum('story_points'),
+            ];
+        });
+
+        return response()->json($data);
+    }
+
+    public function burndown(Sprint $sprint)
+    {
+        // Simple burndown calculation
+        $totalPoints = $sprint->tasks->sum('story_points');
+        $startDate = $sprint->start_date;
+        $endDate = $sprint->end_date ?? now();
+        
+        // This is a placeholder for real historical logic which would require status_history
         return response()->json([
-            'user' => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email],
-            'total' => $tasks->count(),
-            'completed' => $tasks->where('status', 'done')->count(),
-            'in_progress' => $tasks->where('status', 'in_progress')->count(),
-            'tasks' => $tasks->map(fn($t) => [
-                'id' => $t->id,
-                'title' => $t->title,
-                'status' => $t->status,
-                'priority' => $t->priority,
-                'due_date' => $t->due_date?->format('Y-m-d'),
-            ]),
+            'total_points' => $totalPoints,
+            'data' => [
+                ['day' => 0, 'ideal' => $totalPoints, 'actual' => $totalPoints],
+                ['day' => 1, 'ideal' => $totalPoints * 0.8, 'actual' => $totalPoints * 0.9],
+                // ... real logic would iterate through dates
+            ]
         ]);
     }
 
-    public function export(Request $request)
+    public function workload(Workspace $workspace)
     {
-        return Excel::download(new TasksExport(), 'jeallo-tasks-' . now()->format('Y-m-d') . '.xlsx');
+        $members = $workspace->users()->get();
+        
+        $data = $members->map(function($user) {
+            $tasks = \App\Models\Task::whereHas('assignees', fn($q) => $q->where('users.id', $user->id))->get();
+            return [
+                'name' => $user->name,
+                'avatar' => $user->avatar,
+                'task_count' => $tasks->count(),
+                'story_points' => $tasks->sum('story_points'),
+                'overdue' => $tasks->where('due_date', '<', now())->where('status', '!=', 'done')->count(),
+            ];
+        });
+
+        return response()->json($data);
     }
 }
