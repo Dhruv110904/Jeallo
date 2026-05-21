@@ -1,0 +1,62 @@
+services:
+  # 1. Database Service (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: jeallo-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: jeallo
+      MYSQL_ROOT_PASSWORD: Dj@629409
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - jeallo-network
+
+  # 2. Backend Service (Laravel API)
+  backend:
+    build:
+      context: ./jeallo-api
+      dockerfile: Dockerfile
+    container_name: jeallo-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8000:80"
+    environment:
+      # Redirect database host to the db container within the internal docker network
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: jeallo
+      DB_USERNAME: root
+      DB_PASSWORD: Dj@629409
+      APP_URL: http://localhost:8000
+      FRONTEND_URL: http://localhost:5173
+    networks:
+      - jeallo-network
+
+  # 3. Frontend Service (Vite React App)
+  frontend:
+    build:
+      context: ./jeallo
+      dockerfile: Dockerfile
+    container_name: jeallo-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    networks:
+      - jeallo-network
+
+# Setup persistent volumes and isolated bridges
+volumes:
+  mysql-data:
+    driver: local
+
+networks:
+  jeallo-network:
+    driver: bridge
