@@ -28,6 +28,22 @@ class CommentController extends Controller
             'user_id' => Auth::id(),
         ]);
 
+        // Send notifications
+        $commenter = Auth::user();
+        if ($commenter) {
+            foreach ($task->assignees as $assignee) {
+                if ($assignee->id !== $commenter->id) {
+                    $assignee->notify(new \App\Notifications\TaskCommentNotification($task, $comment, $commenter));
+                }
+            }
+            
+            // Also notify the creator of the task if they aren't the commenter and aren't an assignee
+            $creator = $task->creator;
+            if ($creator && $creator->id !== $commenter->id && !$task->assignees->contains($creator->id)) {
+                $creator->notify(new \App\Notifications\TaskCommentNotification($task, $comment, $commenter));
+            }
+        }
+
         return new CommentResource($comment);
     }
 

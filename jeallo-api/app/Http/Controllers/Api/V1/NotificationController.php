@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class NotificationController extends Controller
 {
@@ -17,7 +18,7 @@ class NotificationController extends Controller
         return response()->json($notifications);
     }
 
-    public function markRead(Request $request, string $id)
+    public function markAsRead(Request $request, string $id)
     {
         $notification = $request->user()->notifications()->findOrFail($id);
         $notification->markAsRead();
@@ -30,3 +31,4 @@ class NotificationController extends Controller
         return response()->json(['message' => 'All notifications marked as read.']);
     }
 }
+

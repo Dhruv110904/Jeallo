@@ -18,6 +18,7 @@ import Landing from './pages/Landing';
 import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Inbox from './pages/Inbox';
 import AppLayout from './components/layout/AppLayout';
 import ProjectLayout from './components/layout/ProjectLayout';
 import { useSocket } from './hooks/useSocket';
@@ -50,7 +51,7 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
           <Route index element={<Dashboard />} />
           <Route path="my-tasks" element={<TaskList />} />
-          <Route path="inbox" element={<div className="p-8 text-slate-500">Inbox Feature Coming Soon</div>} />
+          <Route path="inbox" element={<Inbox />} />
           
           {/* Project Specific Routes */}
           <Route path="projects/:projectId" element={<ProjectLayout />}>

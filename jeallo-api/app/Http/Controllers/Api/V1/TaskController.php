@@ -87,6 +87,14 @@ class TaskController extends Controller
 
         if ($request->has('assignee_ids')) {
             $task->assignees()->attach($request->assignee_ids);
+            $task->load('assignees');
+            
+            // Notify assignees
+            foreach ($task->assignees as $assignee) {
+                if ($assignee->id !== Auth::id()) {
+                    $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+                }
+            }
         }
 
         return new TaskResource($task);
@@ -111,10 +119,53 @@ class TaskController extends Controller
             'is_archived' => 'sometimes|boolean',
         ]);
 
+        $oldStatus = $task->status;
         $task->update($validated);
 
         if ($request->has('assignee_ids')) {
+            $currentAssignees = $task->assignees->pluck('id')->toArray();
             $task->assignees()->sync($request->assignee_ids);
+            $task->load('assignees');
+            
+            // Find new assignees
+            $newAssigneeIds = array_diff($request->assignee_ids, $currentAssignees);
+            foreach ($newAssigneeIds as $assigneeId) {
+                if ($assigneeId !== Auth::id()) {
+                    $assignee = \App\Models\User::find($assigneeId);
+                    if ($assignee) {
+                        $assignee->notify(new \App\Notifications\TaskAssignedNotification($task));
+                    }
+                }
+            }
+        }
+
+        if (isset($validated['status']) && strtolower($oldStatus) !== strtolower($validated['status'])) {
+            $newStatus = $validated['status'];
+            $isCompletedStatus = in_array(strtolower($newStatus), ['done', 'complete', 'completed', 'comlete', 'finished']);
+            
+            if ($isCompletedStatus) {
+                foreach ($task->assignees as $assignee) {
+                    if ($assignee->id !== Auth::id()) {
+                        $assignee->notify(new \App\Notifications\TaskCompletedNotification($task, Auth::user()));
+                    }
+                }
+                
+                $creator = $task->creator;
+                if ($creator && $creator->id !== Auth::id() && !$task->assignees->contains($creator->id)) {
+                    $creator->notify(new \App\Notifications\TaskCompletedNotification($task, Auth::user()));
+                }
+            } else {
+                foreach ($task->assignees as $assignee) {
+                    if ($assignee->id !== Auth::id()) {
+                        $assignee->notify(new \App\Notifications\TaskStatusChangedNotification($task, $oldStatus, $newStatus));
+                    }
+                }
+                
+                $creator = $task->creator;
+                if ($creator && $creator->id !== Auth::id() && !$task->assignees->contains($creator->id)) {
+                    $creator->notify(new \App\Notifications\TaskStatusChangedNotification($task, $oldStatus, $newStatus));
+                }
+            }
         }
 
         return new TaskResource($task);
@@ -129,7 +180,11 @@ class TaskController extends Controller
             'board_id' => 'nullable|exists:boards,id',
         ]);
 
-        DB::transaction(function () use ($task, $validated) {
+        $statusChanged = false;
+        $oldStatus = '';
+        $newStatus = '';
+
+        DB::transaction(function () use ($task, $validated, &$statusChanged, &$oldStatus, &$newStatus) {
             $newList = TaskList::findOrFail($validated['list_id']);
             $oldListId = $task->list_id;
             $oldPosition = $task->position;
@@ -145,12 +200,16 @@ class TaskController extends Controller
 
             // Record status history if list changed
             if ($oldListId !== $newList->id) {
+                $oldStatus = $task->status;
+                $newStatus = $newList->name;
+                $statusChanged = true;
+
                 $task->statusHistory()->create([
                     'changed_by' => Auth::id(),
                     'old_list_id' => $oldListId,
                     'new_list_id' => $newList->id,
-                    'old_status' => $task->status,
-                    'new_status' => $newList->name,
+                    'old_status' => $oldStatus,
+                    'new_status' => $newStatus,
                 ]);
                 $task->status = $newList->name;
             }
@@ -187,6 +246,37 @@ class TaskController extends Controller
             $task->board_id = $validated['board_id'] ?? $task->board_id;
             $task->save();
         });
+
+        if ($statusChanged) {
+            $isCompletedStatus = in_array(strtolower($newStatus), ['done', 'complete', 'completed', 'comlete', 'finished']);
+            if ($isCompletedStatus) {
+                // Notify assignees
+                foreach ($task->assignees as $assignee) {
+                    if ($assignee->id !== Auth::id()) {
+                        $assignee->notify(new \App\Notifications\TaskCompletedNotification($task, Auth::user()));
+                    }
+                }
+                
+                // Also notify creator
+                $creator = $task->creator;
+                if ($creator && $creator->id !== Auth::id() && !$task->assignees->contains($creator->id)) {
+                    $creator->notify(new \App\Notifications\TaskCompletedNotification($task, Auth::user()));
+                }
+            } else {
+                // Notify assignees
+                foreach ($task->assignees as $assignee) {
+                    if ($assignee->id !== Auth::id()) {
+                        $assignee->notify(new \App\Notifications\TaskStatusChangedNotification($task, $oldStatus, $newStatus));
+                    }
+                }
+                
+                // Also notify creator
+                $creator = $task->creator;
+                if ($creator && $creator->id !== Auth::id() && !$task->assignees->contains($creator->id)) {
+                    $creator->notify(new \App\Notifications\TaskStatusChangedNotification($task, $oldStatus, $newStatus));
+                }
+            }
+        }
 
         return new TaskResource($task);
     }

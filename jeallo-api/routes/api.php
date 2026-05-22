@@ -109,6 +109,7 @@ Route::prefix('v1')->group(function () {
         // Notifications
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('notifications/read-all', [NotificationController::class, 'readAll']);
 
         // Calendar
         Route::get('calendar/events', [CalendarController::class, 'events']);
