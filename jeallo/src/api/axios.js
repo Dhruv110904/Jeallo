@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { useWorkspaceStore } from '../store/workspaceStore';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL + '/api',
@@ -14,6 +15,12 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  const workspaceId = useWorkspaceStore.getState().currentWorkspace?.id;
+  if (workspaceId) {
+    config.headers['X-Workspace-Id'] = workspaceId;
+  }
+  
   return config;
 });
 

@@ -75,7 +75,7 @@ Route::prefix('v1')->group(function () {
         Route::get('boards/{board}/tasks', [TaskController::class, 'index']);
         Route::get('projects/{project}/tasks', [TaskController::class, 'projectTasks']);
         Route::post('projects/{project}/tasks', [TaskController::class, 'store']);
-        Route::apiResource('tasks', TaskController::class)->except(['index', 'store']);
+        Route::apiResource('tasks', TaskController::class)->except(['store']);
         Route::patch('tasks/{task}/move', [TaskController::class, 'move']);
         Route::post('tasks/{task}/duplicate', [TaskController::class, 'duplicate']);
         Route::post('tasks/bulk-update', [TaskController::class, 'bulkUpdate']);
@@ -102,6 +102,7 @@ Route::prefix('v1')->group(function () {
         // Reports
         Route::get('projects/{project}/reports/overview', [ReportController::class, 'overview']);
         Route::get('projects/{project}/reports/velocity', [ReportController::class, 'velocity']);
+        Route::get('projects/{project}/reports/export', [ReportController::class, 'export']);
         Route::get('sprints/{sprint}/reports/burndown', [ReportController::class, 'burndown']);
         Route::get('workspaces/{workspace}/reports/workload', [ReportController::class, 'workload']);
 
@@ -111,9 +112,14 @@ Route::prefix('v1')->group(function () {
 
         // Calendar
         Route::get('calendar/events', [CalendarController::class, 'events']);
+        Route::post('calendar/events', [CalendarController::class, 'storeMeeting']);
+        Route::delete('calendar/events/{meeting}', [CalendarController::class, 'destroyMeeting']);
+        Route::post('calendar/holidays', [CalendarController::class, 'storeHoliday']);
+        Route::delete('calendar/holidays/{holiday}', [CalendarController::class, 'destroyHoliday']);
 
         // Attendance
         Route::get('attendance', [AttendanceController::class, 'index']);
+        Route::get('attendance/export', [AttendanceController::class, 'export']);
         Route::get('attendance/status', [AttendanceController::class, 'status']);
         Route::post('attendance/check-in', [AttendanceController::class, 'checkIn']);
         Route::post('attendance/check-out', [AttendanceController::class, 'checkOut']);
@@ -122,6 +128,7 @@ Route::prefix('v1')->group(function () {
         Route::get('leaves', [LeaveController::class, 'index']);
         Route::post('leaves', [LeaveController::class, 'store']);
         Route::get('leaves/stats', [LeaveController::class, 'stats']);
+        Route::patch('leaves/{leave}', [LeaveController::class, 'update']);
 
         // Profile & Security
         Route::put('me/password', [AuthController::class, 'changePassword']);

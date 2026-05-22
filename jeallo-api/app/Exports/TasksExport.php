@@ -9,9 +9,19 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class TasksExport implements FromCollection, WithHeadings, WithMapping
 {
+    protected $projectId;
+
+    public function __construct($projectId)
+    {
+        $this->projectId = $projectId;
+    }
+
     public function collection()
     {
-        return Task::with(['creator', 'assignees'])->withTrashed(false)->get();
+        return Task::with(['creator', 'assignees'])
+            ->where('project_id', $this->projectId)
+            ->withTrashed(false)
+            ->get();
     }
 
     public function headings(): array

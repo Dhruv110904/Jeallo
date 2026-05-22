@@ -1,8 +1,11 @@
 services:
   # 1. Database Service (MySQL)
   db:
-    image: mysql:8.0
-    container_name: jeallo-db
+    image: dhruv110904/jeallo-db:1.0
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM mysql:8.0
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: jeallo
@@ -20,6 +23,7 @@ services:
     build:
       context: ./jeallo-api
       dockerfile: Dockerfile
+    image: dhruv110904/jeallo-backend:1.0
     container_name: jeallo-backend
     restart: unless-stopped
     depends_on:
@@ -43,6 +47,7 @@ services:
     build:
       context: ./jeallo
       dockerfile: Dockerfile
+    image: dhruv110904/jeallo-frontend:1.0
     container_name: jeallo-frontend
     restart: unless-stopped
     depends_on:

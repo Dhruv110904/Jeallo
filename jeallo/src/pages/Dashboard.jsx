@@ -25,12 +25,39 @@ export default function Dashboard() {
     if (currentWorkspace) {
       const fetchData = async () => {
         try {
-          const [projectsRes, tasksRes] = await Promise.all([
+          const [projectsResult, tasksResult] = await Promise.allSettled([
             api.get(`/v1/workspaces/${currentWorkspace.id}/projects`),
             api.get('/v1/tasks', { params: { workspace_id: currentWorkspace.id } })
           ]);
-          setProjects(projectsRes.data.data);
-          setRecentTasks(tasksRes.data.data.slice(0, 5));
+
+          let fetchedProjects = [];
+          if (projectsResult.status === 'fulfilled') {
+            fetchedProjects = projectsResult.value.data.data;
+            setProjects(fetchedProjects);
+          } else {
+            console.error('Failed to fetch projects', projectsResult.reason);
+          }
+
+          let fetchedTasks = [];
+          if (tasksResult.status === 'fulfilled') {
+            const rawTasks = tasksResult.value.data.data;
+            fetchedTasks = (rawTasks || []).map(task => {
+              let normalizedStatus = task.status;
+              if (task.status) {
+                const lower = task.status.toLowerCase().trim();
+                if (['done', 'complete', 'completed', 'comlete', 'finished'].includes(lower)) {
+                  normalizedStatus = 'Done';
+                }
+              }
+              return {
+                ...task,
+                status: normalizedStatus
+              };
+            });
+            setRecentTasks(fetchedTasks.slice(0, 5));
+          } else {
+            console.error('Failed to fetch tasks', tasksResult.reason);
+          }
           
           // Dummy data for premium visualization
           setStats({
@@ -46,7 +73,7 @@ export default function Dashboard() {
             employeeStats: {
                 presentDays: 22,
                 pendingLeaves: 1,
-                tasksAssigned: tasksRes.data.data.length,
+                tasksAssigned: fetchedTasks.length,
                 leaveBalance: 12
             }
           });

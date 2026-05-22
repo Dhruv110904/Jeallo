@@ -61,6 +61,20 @@ class UserController extends Controller
 
         $user->assignRole($validated['role']);
 
+        // Auto-associate the new employee with the workspace of the creator, or the default workspace
+        $creator = auth()->user();
+        $workspace = $creator ? $creator->workspaces()->first() : null;
+        if (!$workspace) {
+            $workspace = \App\Models\Workspace::first();
+        }
+
+        if ($workspace) {
+            $workspace->users()->attach($user->id, [
+                'role' => 'member',
+                'joined_at' => now(),
+            ]);
+        }
+
         return response()->json([
             'message' => 'Employee created successfully.',
             'user' => new UserResource($user->load('roles')),

@@ -13,6 +13,7 @@ import Attendance from './pages/Attendance';
 import Leaves from './pages/Leaves';
 import Backlog from './pages/Backlog';
 import Timeline from './pages/Timeline';
+import ProjectSummary from './pages/ProjectSummary';
 import Landing from './pages/Landing';
 import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
@@ -54,7 +55,7 @@ function App() {
           {/* Project Specific Routes */}
           <Route path="projects/:projectId" element={<ProjectLayout />}>
             <Route index element={<Navigate to="board" replace />} />
-            <Route path="summary" element={<div />} />
+            <Route path="summary" element={<ProjectSummary />} />
             <Route path="board" element={<Kanban />} />
             <Route path="backlog" element={<Backlog />} />
             <Route path="timeline" element={<Timeline />} />

@@ -15,7 +15,7 @@ class TaskController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Task::query()->with(['creator', 'assignees', 'labels', 'epic']);
+        $query = Task::query()->with(['creator', 'assignees', 'labels', 'epic', 'list']);
 
         if ($request->has('board_id')) {
             $query->where('board_id', $request->board_id);
@@ -29,13 +29,32 @@ class TaskController extends Controller
             $query->where('epic_id', $request->epic_id);
         }
 
+        if ($request->has('workspace_id')) {
+            $query->whereHas('project', function ($q) use ($request) {
+                $q->where('workspace_id', $request->workspace_id);
+            });
+        }
+
+        $user = Auth::user();
+        if ($user && $user->role === 'employee') {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assignees', function ($sq) use ($user) {
+                    $sq->where('users.id', $user->id);
+                })->orWhere('created_by', $user->id);
+            });
+        } elseif ($request->has('assignee_id')) {
+            $query->whereHas('assignees', function ($q) use ($request) {
+                $q->where('users.id', $request->assignee_id);
+            });
+        }
+
         return TaskResource::collection($query->orderBy('position')->get());
     }
 
     public function projectTasks(Project $project)
     {
         $tasks = $project->tasks()
-            ->with(['creator', 'assignees', 'labels', 'epic'])
+            ->with(['creator', 'assignees', 'labels', 'epic', 'list'])
             ->orderBy('position')
             ->get();
             
@@ -75,7 +94,7 @@ class TaskController extends Controller
 
     public function show(Task $task)
     {
-        return new TaskResource($task->load(['creator', 'reporter', 'assignees', 'labels', 'epic', 'comments.user', 'checklists.items', 'timeLogs', 'statusHistory', 'outgoingLinks.targetTask']));
+        return new TaskResource($task->load(['creator', 'reporter', 'assignees', 'labels', 'epic', 'list', 'comments.user', 'checklists.items', 'timeLogs', 'statusHistory', 'outgoingLinks.targetTask']));
     }
 
     public function update(Request $request, Task $task)
@@ -112,9 +131,12 @@ class TaskController extends Controller
 
         DB::transaction(function () use ($task, $validated) {
             $newList = TaskList::findOrFail($validated['list_id']);
+            $oldListId = $task->list_id;
+            $oldPosition = $task->position;
+            $newPosition = $validated['position'];
             
             // WIP Limit check
-            if ($newList->wip_limit && $newList->id !== $task->list_id) {
+            if ($newList->wip_limit && $newList->id !== $oldListId) {
                 $currentCount = $newList->tasks()->where('is_archived', false)->count();
                 if ($currentCount >= $newList->wip_limit) {
                     throw new \Exception("WIP limit reached for this column", 422);
@@ -122,10 +144,10 @@ class TaskController extends Controller
             }
 
             // Record status history if list changed
-            if ($task->list_id !== $newList->id) {
+            if ($oldListId !== $newList->id) {
                 $task->statusHistory()->create([
                     'changed_by' => Auth::id(),
-                    'old_list_id' => $task->list_id,
+                    'old_list_id' => $oldListId,
                     'new_list_id' => $newList->id,
                     'old_status' => $task->status,
                     'new_status' => $newList->name,
@@ -133,13 +155,34 @@ class TaskController extends Controller
                 $task->status = $newList->name;
             }
 
-            // Simple reordering logic: shift other tasks
-            Task::where('list_id', $newList->id)
-                ->where('position', '>=', $validated['position'])
-                ->increment('position');
+            if ($oldListId === $newList->id) {
+                // Moving within the same list
+                if ($oldPosition < $newPosition) {
+                    Task::where('list_id', $newList->id)
+                        ->where('position', '>', $oldPosition)
+                        ->where('position', '<=', $newPosition)
+                        ->decrement('position');
+                } elseif ($oldPosition > $newPosition) {
+                    Task::where('list_id', $newList->id)
+                        ->where('position', '>=', $newPosition)
+                        ->where('position', '<', $oldPosition)
+                        ->increment('position');
+                }
+            } else {
+                // Moving to a different list
+                // 1. Decrement positions in the old list to close the gap
+                Task::where('list_id', $oldListId)
+                    ->where('position', '>', $oldPosition)
+                    ->decrement('position');
+
+                // 2. Increment positions in the new list to make room
+                Task::where('list_id', $newList->id)
+                    ->where('position', '>=', $newPosition)
+                    ->increment('position');
+            }
 
             $task->list_id = $newList->id;
-            $task->position = $validated['position'];
+            $task->position = $newPosition;
             $task->sprint_id = $validated['sprint_id'] ?? $task->sprint_id;
             $task->board_id = $validated['board_id'] ?? $task->board_id;
             $task->save();

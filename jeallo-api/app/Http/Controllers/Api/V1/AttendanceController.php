@@ -12,11 +12,57 @@ class AttendanceController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $attendances = Attendance::where('user_id', $user->id)
-            ->orderBy('date', 'desc')
-            ->paginate(30);
+        $query = Attendance::orderBy('date', 'desc');
+
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            $query->where('user_id', $user->id);
+        } else {
+            $query->with('user');
+        }
+
+        $attendances = $query->paginate(30);
 
         return response()->json($attendances);
+    }
+
+    public function export(Request $request)
+    {
+        $user = $request->user();
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="attendance-report-' . now()->format('Y-m-d') . '.csv"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $callback = function() {
+            $file = fopen('php://output', 'w');
+            fputs($file, "\xEF\xBB\xBF");
+            fputcsv($file, ['Employee Name', 'Email', 'Date', 'Check In', 'Check Out', 'Working Hours', 'Status']);
+
+            $attendances = Attendance::with('user')->orderBy('date', 'desc')->get();
+
+            foreach ($attendances as $row) {
+                fputcsv($file, [
+                    $row->user ? $row->user->name : 'N/A',
+                    $row->user ? $row->user->email : 'N/A',
+                    $row->date ? $row->date->format('Y-m-d') : 'N/A',
+                    $row->check_in ?? '--:--',
+                    $row->check_out ?? '--:--',
+                    $row->working_hours ?? '0.00',
+                    ucfirst($row->status)
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     public function status(Request $request)

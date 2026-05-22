@@ -15,9 +15,9 @@ class ReportController extends Controller
     {
         $stats = [
             'total_tasks' => $project->tasks()->count(),
-            'completed' => $project->tasks()->where('status', 'done')->count(),
-            'in_progress' => $project->tasks()->whereIn('status', ['in_progress', 'in_review'])->count(),
-            'overdue' => $project->tasks()->where('due_date', '<', now())->where('status', '!=', 'done')->count(),
+            'completed' => $project->tasks()->whereIn(DB::raw('LOWER(status)'), ['done', 'complete', 'completed', 'comlete', 'finished'])->count(),
+            'in_progress' => $project->tasks()->whereIn(DB::raw('LOWER(status)'), ['in_progress', 'in progress', 'in_review', 'in review', 'doing', 'testing'])->count(),
+            'overdue' => $project->tasks()->where('due_date', '<', now())->whereNotIn(DB::raw('LOWER(status)'), ['done', 'complete', 'completed', 'comlete', 'finished'])->count(),
         ];
 
         $byStatus = $project->tasks()
@@ -48,7 +48,9 @@ class ReportController extends Controller
             return [
                 'name' => $sprint->name,
                 'committed' => $sprint->tasks->sum('story_points'),
-                'completed' => $sprint->tasks->where('status', 'done')->sum('story_points'),
+                'completed' => $sprint->tasks->filter(function($t) {
+                    return in_array(strtolower(trim($t->status)), ['done', 'complete', 'completed', 'comlete', 'finished']);
+                })->sum('story_points'),
             ];
         });
 
@@ -84,10 +86,20 @@ class ReportController extends Controller
                 'avatar' => $user->avatar,
                 'task_count' => $tasks->count(),
                 'story_points' => $tasks->sum('story_points'),
-                'overdue' => $tasks->where('due_date', '<', now())->where('status', '!=', 'done')->count(),
+                'overdue' => $tasks->where('due_date', '<', now())->filter(function($t) {
+                    return !in_array(strtolower(trim($t->status)), ['done', 'complete', 'completed', 'comlete', 'finished']);
+                })->count(),
             ];
         });
 
         return response()->json($data);
+    }
+
+    public function export(Project $project)
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\TasksExport($project->id), 
+            'project-report-' . now()->format('Y-m-d') . '.xlsx'
+        );
     }
 }

@@ -1,15 +1,16 @@
 <?php
-
+ 
 namespace App\Http\Controllers\Api\V1;
-
+ 
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use App\Models\Meeting;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-
+ 
 class CalendarController extends Controller
 {
     public function events(Request $request)
@@ -99,5 +100,114 @@ class CalendarController extends Controller
         });
 
         return response()->json($events);
+    }
+
+    public function storeMeeting(Request $request)
+    {
+        $user = $request->user();
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after:start_time',
+            'meeting_link' => 'nullable|url',
+            'type' => 'nullable|in:zoom,google_meet,offline,other',
+        ]);
+
+        $workspaceId = $request->header('X-Workspace-Id');
+        if (!$workspaceId) {
+            return response()->json(['message' => 'Workspace ID is required.'], 400);
+        }
+
+        $meeting = Meeting::create([
+            'workspace_id' => $workspaceId,
+            'title' => $request->title,
+            'description' => $request->description,
+            'start_time' => Carbon::parse($request->start_time),
+            'end_time' => Carbon::parse($request->end_time),
+            'meeting_link' => $request->meeting_link,
+            'type' => $request->type ?? 'other',
+            'created_by' => $user->id,
+        ]);
+
+        // Sync all workspace members as participants
+        $workspace = Workspace::find($workspaceId);
+        if ($workspace) {
+            $userIds = $workspace->users()->pluck('users.id')->toArray();
+            $meeting->participants()->sync($userIds);
+        }
+
+        return response()->json([
+            'message' => 'Meeting created successfully.',
+            'meeting' => $meeting
+        ], 201);
+    }
+
+    public function destroyMeeting(Request $request, Meeting $meeting)
+    {
+        $user = $request->user();
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $meeting->delete();
+
+        return response()->json(['message' => 'Meeting deleted successfully.']);
+    }
+
+    public function storeHoliday(Request $request)
+    {
+        $user = $request->user();
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'date' => 'required|date',
+            'type' => 'nullable|in:public,company,other',
+        ]);
+
+        $workspaceId = $request->header('X-Workspace-Id');
+        if (!$workspaceId) {
+            return response()->json(['message' => 'Workspace ID is required.'], 400);
+        }
+
+        // Check if unique for date
+        $exists = Holiday::where('workspace_id', $workspaceId)
+            ->whereDate('date', Carbon::parse($request->date))
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'A holiday already exists on this date.'], 422);
+        }
+
+        $holiday = Holiday::create([
+            'workspace_id' => $workspaceId,
+            'name' => $request->name,
+            'date' => Carbon::parse($request->date),
+            'type' => $request->type ?? 'public',
+        ]);
+
+        return response()->json([
+            'message' => 'Holiday created successfully.',
+            'holiday' => $holiday
+        ], 201);
+    }
+
+    public function destroyHoliday(Request $request, Holiday $holiday)
+    {
+        $user = $request->user();
+        if (!in_array($user->role, ['admin', 'super_admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $holiday->delete();
+
+        return response()->json(['message' => 'Holiday deleted successfully.']);
     }
 }

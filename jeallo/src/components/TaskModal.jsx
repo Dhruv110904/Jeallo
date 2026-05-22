@@ -32,7 +32,7 @@ export default function TaskModal({ isOpen, onClose, task = null }) {
 
   const { data: users } = useQuery({
     queryKey: ['users-simple'],
-    queryFn: () => api.get('/users').then(res => res.data),
+    queryFn: () => api.get('/v1/users').then(res => res.data),
     enabled: isOpen,
   });
 
@@ -50,8 +50,8 @@ export default function TaskModal({ isOpen, onClose, task = null }) {
 
   const mutation = useMutation({
     mutationFn: (data) => isEditing 
-      ? api.put(`/tasks/${task.id}`, data)
-      : api.post('/tasks', data),
+      ? api.put(`/v1/tasks/${task.id}`, data)
+      : api.post('/v1/tasks', data),
     onSuccess: () => {
       queryClient.invalidateQueries(['tasks']);
       queryClient.invalidateQueries(['dashboard-stats']);

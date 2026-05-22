@@ -9,11 +9,14 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { useAuthStore } from '../store/authStore';
 
 export default function Attendance() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { role } = useAuthStore();
+  const isAdmin = ['admin', 'super_admin'].includes(role?.toLowerCase());
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -49,6 +52,21 @@ export default function Attendance() {
     },
     onError: (error) => toast.error(error.response?.data?.message || 'Check-out failed'),
   });
+
+  const handleExport = async () => {
+    try {
+      const response = await api.get('/v1/attendance/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv;charset=utf-8;' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `jeallo-attendance-report-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      toast.success('Attendance report exported successfully!');
+    } catch (error) {
+      toast.error('Failed to export attendance');
+    }
+  };
 
   const isCheckedIn = statusData?.is_checked_in;
   const isCheckedOut = statusData?.is_checked_out;
@@ -159,7 +177,7 @@ export default function Attendance() {
                         Monthly Attendance History
                     </h3>
                     <div className="flex gap-2">
-                        <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors border border-slate-100">
+                        <button onClick={handleExport} className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors border border-slate-100">
                             <Download className="w-4 h-4" />
                         </button>
                         <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors border border-slate-100">
@@ -172,6 +190,7 @@ export default function Attendance() {
                     <table className="w-full text-left border-separate border-spacing-y-4">
                         <thead>
                             <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                {isAdmin && <th className="px-6 pb-2">Employee</th>}
                                 <th className="px-6 pb-2">Date</th>
                                 <th className="px-6 pb-2">Check In</th>
                                 <th className="px-6 pb-2">Check Out</th>
@@ -182,7 +201,24 @@ export default function Attendance() {
                         <tbody className="space-y-4">
                             {historyData?.data.map((row) => (
                                 <tr key={row.id} className="bg-white hover:bg-slate-50 transition-colors border border-slate-100 group">
-                                    <td className="px-6 py-5 rounded-l-2xl border-y border-l border-slate-50 group-hover:border-slate-100">
+                                    {isAdmin && (
+                                        <td className="px-6 py-5 rounded-l-2xl border-y border-l border-slate-50 group-hover:border-slate-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-jeallo-primary/10 flex items-center justify-center text-jeallo-primary font-bold overflow-hidden shadow-sm">
+                                                    {row.user?.avatar ? (
+                                                        <img src={row.user.avatar} alt={row.user.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        row.user?.name ? row.user.name.charAt(0).toUpperCase() : '?'
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-black text-slate-900 text-sm leading-none">{row.user?.name || 'Unknown User'}</p>
+                                                    <p className="text-[10px] text-slate-400 font-bold mt-1 leading-none">{row.user?.email || 'No Email'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    )}
+                                    <td className={`px-6 py-5 border-y border-slate-50 group-hover:border-slate-100 ${!isAdmin ? 'rounded-l-2xl border-l' : ''}`}>
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-slate-50 flex flex-col items-center justify-center border border-slate-100">
                                                 <span className="text-[10px] font-black text-slate-400 uppercase leading-none">{format(new Date(row.date), 'MMM')}</span>

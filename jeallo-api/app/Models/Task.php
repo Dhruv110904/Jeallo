@@ -160,7 +160,8 @@ class Task extends Model implements HasMedia
 
     public function scopeOverdue($query)
     {
-        return $query->where('due_date', '<', now())->where('status', '!=', 'done');
+        return $query->where('due_date', '<', now())
+            ->whereNotIn(\Illuminate\Support\Facades\DB::raw('LOWER(status)'), ['done', 'complete', 'completed', 'comlete', 'finished']);
     }
 
     public function getProgressAttribute(): float

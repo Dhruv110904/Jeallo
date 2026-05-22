@@ -12,7 +12,13 @@ class TaskListController extends Controller
 {
     public function index(Board $board)
     {
-        return TaskListResource::collection($board->lists);
+        $lists = $board->lists()
+            ->with(['tasks' => function ($q) {
+                $q->orderBy('position');
+            }, 'tasks.creator', 'tasks.assignees', 'tasks.labels', 'tasks.epic'])
+            ->get();
+
+        return TaskListResource::collection($lists);
     }
 
     public function store(Request $request, Board $board)
@@ -25,6 +31,13 @@ class TaskListController extends Controller
             'wip_limit' => 'nullable|integer',
         ]);
 
+        if (!isset($validated['is_done_list'])) {
+            $nameLower = strtolower(trim($validated['name']));
+            if (in_array($nameLower, ['done', 'complete', 'completed', 'comlete', 'finished'])) {
+                $validated['is_done_list'] = true;
+            }
+        }
+
         $list = $board->lists()->create([
             ...$validated,
             'position' => $validated['position'] ?? $board->lists()->count(),
@@ -35,13 +48,28 @@ class TaskListController extends Controller
 
     public function update(Request $request, TaskList $list)
     {
-        $list->update($request->validate([
+        $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'color' => 'nullable|string',
             'position' => 'sometimes|integer',
             'is_done_list' => 'sometimes|boolean',
             'wip_limit' => 'nullable|integer',
-        ]));
+        ]);
+
+        if (isset($validated['name']) && !isset($validated['is_done_list'])) {
+            $nameLower = strtolower(trim($validated['name']));
+            if (in_array($nameLower, ['done', 'complete', 'completed', 'comlete', 'finished'])) {
+                $validated['is_done_list'] = true;
+            } else {
+                $validated['is_done_list'] = false;
+            }
+        }
+
+        $list->update($validated);
+
+        if (isset($validated['name'])) {
+            $list->tasks()->update(['status' => $validated['name']]);
+        }
 
         return new TaskListResource($list);
     }

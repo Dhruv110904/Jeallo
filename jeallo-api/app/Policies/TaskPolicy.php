@@ -22,20 +22,23 @@ class TaskPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole(['manager', 'super_admin']);
+        return $user->hasRole(['manager', 'super_admin', 'employee']) || in_array($user->role, ['manager', 'super_admin', 'employee']);
     }
 
     public function update(User $user, Task $task): bool
     {
-        if ($user->hasRole(['manager', 'super_admin'])) {
+        if ($user->hasRole(['manager', 'super_admin']) || in_array($user->role, ['manager', 'super_admin'])) {
             return true;
         }
-        return $task->assignees->contains($user->id);
+        return $task->assignees->contains($user->id) || $task->created_by === $user->id;
     }
 
     public function delete(User $user, Task $task): bool
     {
-        return $user->hasRole(['manager', 'super_admin']);
+        if ($user->hasRole(['manager', 'super_admin']) || in_array($user->role, ['manager', 'super_admin'])) {
+            return true;
+        }
+        return $task->created_by === $user->id;
     }
 
     public function restore(User $user, Task $task): bool

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, NavLink } from 'react-router-dom';
 import { 
   UserPlus, MoreHorizontal, Edit2, Trash2, 
-  LayoutDashboard, ListTodo, Kanban, Clock 
+  LayoutDashboard, ListTodo, Kanban, Clock, BarChart3 
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import ProjectMemberModal from './ProjectMemberModal';
@@ -62,6 +62,7 @@ export default function ProjectHeader() {
     { label: 'List', path: `/dashboard/projects/${projectId}/backlog`, icon: ListTodo },
     { label: 'Board', path: `/dashboard/projects/${projectId}/board`, icon: Kanban },
     { label: 'Timeline', path: `/dashboard/projects/${projectId}/timeline`, icon: Clock },
+    { label: 'Reports', path: `/dashboard/projects/${projectId}/reports`, icon: BarChart3 },
   ];
 
   return (

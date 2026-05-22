@@ -80,11 +80,6 @@ export default function KanbanCard({ task, onClick }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {task.story_points && (
-            <span className="w-5 h-5 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
-              {task.story_points}
-            </span>
-          )}
           <div className="w-6 h-6 rounded-full bg-cloud-white border border-slate-200 flex items-center justify-center overflow-hidden">
             {task.assignee?.avatar ? (
               <img src={task.assignee.avatar} alt="" className="w-full h-full object-cover" />

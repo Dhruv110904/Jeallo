@@ -69,7 +69,7 @@ export default function ProjectModal({ isOpen, onClose, workspaceId, project = n
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
       <div className="relative bg-white w-full max-w-2xl rounded-none p-10 shadow-2xl animate-in zoom-in duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar border border-slate-200">
         <div className="flex items-center justify-between mb-8">

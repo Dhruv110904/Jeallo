@@ -17,9 +17,23 @@ export default function Timeline() {
     queryFn: () => api.get(`/v1/projects/${projectId}`).then(res => res.data.data),
   });
 
-  const { data: tasks, isLoading } = useQuery({
+  const { data: rawTasks, isLoading } = useQuery({
     queryKey: ['project-tasks', projectId],
     queryFn: () => api.get(`/v1/projects/${projectId}/tasks`).then(res => res.data.data),
+  });
+
+  const tasks = (rawTasks || []).map(task => {
+    let normalizedStatus = task.status;
+    if (task.status) {
+      const lower = task.status.toLowerCase().trim();
+      if (['done', 'complete', 'completed', 'comlete', 'finished'].includes(lower)) {
+        normalizedStatus = 'Done';
+      }
+    }
+    return {
+      ...task,
+      status: normalizedStatus
+    };
   });
 
   const days = eachDayOfInterval({

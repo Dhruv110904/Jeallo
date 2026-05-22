@@ -12,7 +12,7 @@ export default function NotificationBell() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await api.get('/notifications');
+        const response = await api.get('/v1/notifications');
         setNotifications(response.data.data);
       } catch (error) {
         console.error('Failed to fetch notifications', error);
@@ -31,7 +31,7 @@ export default function NotificationBell() {
 
   const handleMarkAsRead = async (id) => {
     try {
-      await api.patch(`/notifications/${id}/read`);
+      await api.patch(`/v1/notifications/${id}/read`);
       markRead(id);
     } catch (error) {
       console.error('Failed to mark notification as read', error);
