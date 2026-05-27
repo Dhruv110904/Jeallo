@@ -98,7 +98,7 @@ FRONTEND_URL=http://43.205.113.7
             steps {
 
                 sh '''
-                ssh ubuntu@43.205.113.7"
+                ssh ubuntu@43.205.113.7 "
 
                     cd jeallo &&
 
