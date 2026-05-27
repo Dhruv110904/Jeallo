@@ -11,12 +11,6 @@ pipeline {
 
     stages {
 
-        stage('Clone') {
-            steps {
-                git 'https://github.com/Dhruv110904/Jeallo.git'
-            }
-        }
-
         stage('Create Frontend Env') {
             steps {
 
