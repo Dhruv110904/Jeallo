@@ -4,9 +4,9 @@ pipeline {
 
     environment {
 
-        FRONTEND_IMAGE = "dhruv110904/jeallo-frontend:latest"
+        FRONTEND_IMAGE = "dhruv110904/jeallo-frontend:1.0"
 
-        BACKEND_IMAGE = "dhruv110904/jeallo-backend:latest"
+        BACKEND_IMAGE = "dhruv110904/jeallo-backend:1.0"
     }
 
     stages {
@@ -104,7 +104,7 @@ FRONTEND_URL=http://43.205.113.7
 
                     docker compose pull &&
 
-                    docker compose up -d
+                    docker compose up -d --remove-orphans
                 "
                 '''
             }
