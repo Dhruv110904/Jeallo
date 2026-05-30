@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Target, 
-  CheckCircle2, 
-  BarChart3, 
-  Zap, 
-  Users, 
+import {
+  Target,
+  CheckCircle2,
+  BarChart3,
+  Zap,
+  Users,
   ArrowRight,
   Layout,
   Clock,
@@ -78,7 +78,7 @@ const featuresList = [
 const FeatureCard = ({ item, onClick }) => {
   const Icon = item.icon;
   return (
-    <button 
+    <button
       onClick={() => onClick(item)}
       className="p-8 bg-white border border-slate-100 rounded-[1.5rem] shadow-[0_8px_24px_rgba(149,157,165,0.04)] hover:shadow-[0_16px_36px_rgba(149,157,165,0.08)] hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden flex flex-col items-start w-full text-left"
     >
@@ -108,13 +108,13 @@ export default function Landing() {
 
   // Simulator active tab inside mockup: 'kanban' | 'attendance' | 'leaves'
   const [mockActiveTab, setMockActiveTab] = useState('kanban');
-  
+
   // Kanban task status stage: 'todo' | 'progress' | 'done'
   const [mockKanbanState, setMockKanbanState] = useState('todo');
-  
+
   // Attendance shift state: 'offline' | 'checked_in' | 'checked_out'
   const [mockAttendanceState, setMockAttendanceState] = useState('offline');
-  
+
   // Leaves approval lists simulation
   const [mockLeavesList, setMockLeavesList] = useState([
     { id: 1, name: 'Sarah Connor', type: 'Maternity Leave', range: 'May 28 - Jun 15', status: 'pending', reason: 'Family expansion and care' },
@@ -173,7 +173,7 @@ export default function Landing() {
             </div>
             <span className="text-lg font-black text-slate-850 tracking-tighter uppercase">Jeallo</span>
           </div>
-          
+
           <div className="hidden md:flex items-center gap-8 text-[10px] font-black text-slate-500 uppercase tracking-widest">
             <a href="#features" className="hover:text-jeallo-primary transition-colors">Features</a>
             <a href="#preview" className="hover:text-jeallo-primary transition-colors">Workspace</a>
@@ -181,8 +181,8 @@ export default function Landing() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link 
-              to={token ? "/dashboard" : "/login"} 
+            <Link
+              to={token ? "/dashboard" : "/login"}
               className="text-xs font-black text-white bg-jeallo-primary hover:bg-jeallo-primary/95 px-6 py-2.5 rounded-md transition-all shadow-md shadow-jeallo-primary/10 hover:scale-105 active:scale-95 uppercase tracking-wider"
             >
               {token ? "Dashboard" : "Log In"}
@@ -194,33 +194,33 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="relative pt-28 pb-16 px-6 z-10 flex-1 flex flex-col justify-center items-center">
         <div className="max-w-4xl w-full text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          
+
           {/* Decorative Tag */}
           <div className="inline-flex items-center gap-1.5 bg-jeallo-primary/5 text-jeallo-primary px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-jeallo-primary/10">
             <Rocket className="w-3.5 h-3.5 text-jeallo-primary" />
             Workforce Management Redefined
           </div>
-          
+
           <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight max-w-3xl mx-auto">
             Master your tasks with <br />
             <span className="text-jeallo-primary">unmatched</span> speed.
           </h1>
-          
+
           <p className="text-sm md:text-base text-slate-500 max-w-2xl mx-auto leading-relaxed font-medium">
-            Jeallo combines the structure of enterprise planning with the simplicity of visual boards. 
+            Jeallo combines the structure of enterprise planning with the simplicity of visual boards.
             The unified platform your team needs to collaborate, log attendance, and ship results.
           </p>
 
           {/* Call to Actions */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto pt-2">
-            <Link 
-              to={token ? "/dashboard" : "/login"} 
+            <Link
+              to={token ? "/dashboard" : "/login"}
               className="w-full sm:w-auto bg-jeallo-primary hover:bg-jeallo-primary/95 text-white px-8 py-3.5 rounded-md font-black text-sm transition-all shadow-md shadow-jeallo-primary/15 flex items-center justify-center gap-2 uppercase tracking-wider hover:scale-[1.02] active:scale-95"
             >
               Launch Platform
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <a 
+            <a
               href="#preview"
               className="w-full sm:w-auto bg-white border border-slate-200 text-slate-600 px-8 py-3.5 rounded-md font-black text-sm transition-all flex items-center justify-center gap-2 hover:bg-slate-50 active:scale-95 uppercase tracking-wider"
             >
@@ -258,11 +258,10 @@ export default function Landing() {
 
                   <button
                     onClick={() => setMockActiveTab('kanban')}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full shrink-0 select-none ${
-                      mockActiveTab === 'kanban' 
-                        ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10' 
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full shrink-0 select-none ${mockActiveTab === 'kanban'
+                      ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Layout className="w-4 h-4 shrink-0" />
                     <span>Visual Kanban</span>
@@ -270,11 +269,10 @@ export default function Landing() {
 
                   <button
                     onClick={() => setMockActiveTab('attendance')}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full shrink-0 select-none ${
-                      mockActiveTab === 'attendance' 
-                        ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10' 
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full shrink-0 select-none ${mockActiveTab === 'attendance'
+                      ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Clock className="w-4 h-4 shrink-0" />
                     <span>Shift Tracker</span>
@@ -282,11 +280,10 @@ export default function Landing() {
 
                   <button
                     onClick={() => setMockActiveTab('leaves')}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full shrink-0 select-none ${
-                      mockActiveTab === 'leaves' 
-                        ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10' 
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all w-full shrink-0 select-none ${mockActiveTab === 'leaves'
+                      ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                      }`}
                   >
                     <Users className="w-4 h-4 shrink-0" />
                     <span>Leave Review</span>
@@ -303,7 +300,7 @@ export default function Landing() {
                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Kanban Column View</span>
                           <span className="text-[10px] font-black text-jeallo-primary uppercase tracking-wider bg-jeallo-primary/5 px-2.5 py-0.5 rounded border border-jeallo-primary/10 animate-pulse">Interactive Sandbox</span>
                         </div>
-                        
+
                         <div className="grid grid-cols-3 gap-4">
                           {/* Column: To Do */}
                           <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-150 min-h-[160px] flex flex-col gap-2">
@@ -313,7 +310,7 @@ export default function Landing() {
                                 {mockKanbanState === 'todo' ? 1 : 0}
                               </span>
                             </div>
-                            
+
                             {mockKanbanState === 'todo' && (
                               <div className="p-3 bg-white border border-slate-150 rounded-lg space-y-2 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <span className="text-[7px] font-black uppercase px-1.5 py-0.5 bg-rose-50 text-rose-500 rounded border border-rose-100 tracking-wide">High Priority</span>
@@ -334,7 +331,7 @@ export default function Landing() {
                                 {mockKanbanState === 'progress' ? 1 : 0}
                               </span>
                             </div>
-                            
+
                             {mockKanbanState === 'progress' && (
                               <div className="p-3 bg-white border border-jeallo-primary/20 rounded-lg space-y-2 shadow-md shadow-jeallo-primary/5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <span className="text-[7px] font-black uppercase px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded border border-purple-100 tracking-wide">Active Dev</span>
@@ -355,7 +352,7 @@ export default function Landing() {
                                 {mockKanbanState === 'done' ? 1 : 0}
                               </span>
                             </div>
-                            
+
                             {mockKanbanState === 'done' && (
                               <div className="p-3 bg-emerald-50/10 border border-emerald-250 rounded-lg space-y-2 shadow-sm opacity-90 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <span className="text-[7px] font-black uppercase px-1.5 py-0.5 bg-emerald-50 text-emerald-650 rounded border border-emerald-100 tracking-wide">Verified</span>
@@ -450,7 +447,7 @@ export default function Landing() {
                           <p className="font-bold text-slate-700">Simulate Shift Logs.</p>
                           <p className="text-[10px]">Experience instant shift coordination check-ins.</p>
                         </div>
-                        
+
                         <div className="flex gap-2">
                           {mockAttendanceState === 'offline' && (
                             <button
@@ -495,7 +492,7 @@ export default function Landing() {
                         <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
                           {mockLeavesList.filter(item => item.status === 'pending').length > 0 ? (
                             mockLeavesList.filter(item => item.status === 'pending').map((leave) => (
-                              <div 
+                              <div
                                 key={leave.id}
                                 className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-in slide-in-from-top-1 duration-200"
                               >
@@ -543,7 +540,7 @@ export default function Landing() {
                           <p className="font-bold text-slate-700">Team Resource Management.</p>
                           <p className="text-[10px]">Approve time-off requests with real-time operational feedback.</p>
                         </div>
-                        
+
                         {mockLeavesList.filter(item => item.status === 'pending').length === 0 && (
                           <button
                             onClick={handleResetLeaves}
@@ -578,10 +575,10 @@ export default function Landing() {
               Everything your enterprise workspace demands to track, verify, and complete targets without the friction. Click any feature below to inspect detailed capabilities.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {featuresList.map((feature) => (
-              <FeatureCard 
+              <FeatureCard
                 key={feature.id}
                 item={feature}
                 onClick={(item) => setSelectedFeature(item)}
@@ -623,14 +620,14 @@ export default function Landing() {
               <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-1 bg-jeallo-primary/5 text-jeallo-primary rounded-md">
                 {selectedFeature.category}
               </span>
-              <button 
+              <button
                 onClick={() => setSelectedFeature(null)}
                 className="text-slate-400 hover:text-slate-600 font-bold transition-all text-xs bg-slate-50 w-7 h-7 rounded-full flex items-center justify-center border border-slate-100"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 bg-jeallo-gradient text-white rounded-2xl flex items-center justify-center shadow-lg shrink-0">
                 {(() => {
@@ -645,7 +642,7 @@ export default function Landing() {
               {selectedFeature.details}
             </p>
 
-            <button 
+            <button
               onClick={() => setSelectedFeature(null)}
               className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md"
             >
@@ -660,7 +657,7 @@ export default function Landing() {
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in" onClick={() => { setActiveInfoTab(null); setExpandedFaqIndex(null); }}></div>
           <div className="relative bg-white w-full max-w-2xl rounded-[3rem] p-10 border border-slate-100 shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[85vh]">
-            
+
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-5 shrink-0">
               <div className="flex items-center gap-3">
@@ -671,7 +668,7 @@ export default function Landing() {
                   {getTabTitle()}
                 </h2>
               </div>
-              <button 
+              <button
                 onClick={() => { setActiveInfoTab(null); setExpandedFaqIndex(null); }}
                 className="text-slate-400 hover:text-slate-600 font-bold transition-all text-xs bg-slate-50 w-8 h-8 rounded-full flex items-center justify-center border border-slate-100"
               >
@@ -690,11 +687,10 @@ export default function Landing() {
                 <button
                   key={tab.id}
                   onClick={() => { setActiveInfoTab(tab.id); setExpandedFaqIndex(null); }}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                    activeInfoTab === tab.id 
-                      ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10' 
-                      : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
-                  }`}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${activeInfoTab === tab.id
+                    ? 'bg-jeallo-gradient text-white shadow-md shadow-jeallo-primary/10'
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -703,7 +699,7 @@ export default function Landing() {
 
             {/* Modal Tab Content (Scrollable) */}
             <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-              
+
               {/* ABOUT TAB */}
               {activeInfoTab === 'about' && (
                 <div className="space-y-6 text-slate-600 text-xs font-medium leading-relaxed">
@@ -802,7 +798,7 @@ export default function Landing() {
                     }
                   ].map((faq, index) => (
                     <div key={index} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 transition-colors hover:border-slate-200">
-                      <button 
+                      <button
                         onClick={() => toggleFaq(index)}
                         className="w-full px-5 py-4 flex items-center justify-between font-black text-slate-800 text-xs text-left select-none outline-none"
                       >
@@ -813,7 +809,7 @@ export default function Landing() {
                           <Plus className="w-4 h-4 text-slate-400 shrink-0 ml-4" />
                         )}
                       </button>
-                      
+
                       {expandedFaqIndex === index && (
                         <div className="px-5 pb-5 pt-1 text-slate-500 font-medium text-xs border-t border-slate-100/60 leading-relaxed animate-in slide-in-from-top-1 duration-200">
                           {faq.a}
@@ -828,14 +824,14 @@ export default function Landing() {
 
             {/* Modal Footer */}
             <div className="border-t border-slate-100 pt-5 mt-6 text-right shrink-0">
-              <button 
+              <button
                 onClick={() => { setActiveInfoTab(null); setExpandedFaqIndex(null); }}
                 className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95"
               >
                 Close Portal
               </button>
             </div>
-            
+
           </div>
         </div>
       )}

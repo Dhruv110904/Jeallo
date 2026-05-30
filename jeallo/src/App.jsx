@@ -15,7 +15,7 @@ import Backlog from './pages/Backlog';
 import Timeline from './pages/Timeline';
 import ProjectSummary from './pages/ProjectSummary';
 import Landing from './pages/Landing';
-import VerifyEmail from './pages/VerifyEmail';
+//import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Inbox from './pages/Inbox';
@@ -47,12 +47,12 @@ function App() {
         <Route path="/verify-email" element={<Navigate to="/login" replace />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        
+
         <Route path="/dashboard" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
           <Route index element={<Dashboard />} />
           <Route path="my-tasks" element={<TaskList />} />
           <Route path="inbox" element={<Inbox />} />
-          
+
           {/* Project Specific Routes */}
           <Route path="projects/:projectId" element={<ProjectLayout />}>
             <Route index element={<Navigate to="board" replace />} />
@@ -73,7 +73,7 @@ function App() {
             <RoleRoute roles={['manager', 'super_admin']}><Users /></RoleRoute>
           } />
         </Route>
-        
+
         {/* Redirect unknown routes */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
